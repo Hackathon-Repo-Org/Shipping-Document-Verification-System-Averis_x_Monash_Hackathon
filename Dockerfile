@@ -51,6 +51,9 @@ COPY cache/ ./cache/
 COPY dataset/ ./dataset/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
+# The Evaluation page reads the measured provider comparison from this one file.
+# The rest of docs/ stays out of the image (see .dockerignore).
+COPY docs/provider-comparison.json ./docs/provider-comparison.json
 
 # Non-root. A container that processes third-party documents should not be root, and
 # Azure Container Apps does not require it.

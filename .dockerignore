@@ -16,7 +16,8 @@ __pycache__/
 *.pyc
 *.egg-info/
 tests/
-docs/
+docs/*
+!docs/provider-comparison.json
 eval/
 tools/
 
