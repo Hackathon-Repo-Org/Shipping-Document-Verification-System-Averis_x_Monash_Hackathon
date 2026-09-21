@@ -111,7 +111,6 @@ export const api = {
                    reviewer: string, note = "") =>
     request<unknown>(`/api/proposals/${id}`, writeInit({ decision, reviewer, note })),
 
-  resetDemo: () => request<unknown>("/api/demo/reset", writeInit({})),
 };
 
 /* ---- Shapes. These mirror the OpenAPI schema the API publishes; the vocabulary

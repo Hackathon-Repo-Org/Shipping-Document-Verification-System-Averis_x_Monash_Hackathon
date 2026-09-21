@@ -647,22 +647,7 @@ class SQLRepository:
             "code_version": r.code_version if r else None,
         }
 
-    def reset_demo(self) -> dict:
-        """Restore the seeded state so a public link cannot be permanently broken.
 
-        Clears human decisions and un-decides label proposals. Runs, records and
-        comparisons are LEFT ALONE — they are what the demo is showing, and deleting
-        them would mean re-running the pipeline to get the link working again.
-        """
-        from sqlalchemy import delete
-        with self.session() as s, s.begin():
-            n_dec = s.scalar(select(sqlfunc_count()).select_from(ReviewDecision)) or 0
-            s.execute(delete(ReviewDecision))
-            n_learn = s.scalar(select(sqlfunc_count()).select_from(LearnedLabel)) or 0
-            s.execute(delete(LearnedLabel))
-            s.execute(update(LabelProposal).values(
-                status="pending", decided_by=None, decided_at=None))
-        return {"decisions_cleared": n_dec, "learned_labels_cleared": n_learn}
 
 def _f(v):
     return None if v is None else float(v)

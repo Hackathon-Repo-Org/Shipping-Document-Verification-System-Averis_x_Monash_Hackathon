@@ -423,16 +423,7 @@ def _register(app: FastAPI) -> None:      # noqa: C901 - a route table, not logi
         from shipdoc.adapters.api.samples import SAMPLE2
         return SAMPLE2
 
-    # ------------------------------------------------------------ demo reset
-    @app.post("/api/demo/reset")
-    def reset_demo(repo=Depends(get_repo), _ok=Depends(require_passcode)) -> dict:
-        """Restore the seeded state so nobody can permanently break the public link.
 
-        Clears human decisions and proposal rulings; leaves runs and records alone,
-        because those are what the demo is showing.
-        """
-        removed = repo.reset_demo()
-        return {"reset": True, **removed}
 
 
 # ------------------------------------------------------------------- helpers

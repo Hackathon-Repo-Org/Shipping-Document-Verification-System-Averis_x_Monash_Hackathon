@@ -25,3 +25,5 @@ tools/
 # braces in case someone copies one in.
 sdoc-server/
 **/ground_truth.json
+
+!docs/provider-comparison.json

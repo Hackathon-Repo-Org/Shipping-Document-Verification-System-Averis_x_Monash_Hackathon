@@ -7,23 +7,9 @@ export function Dashboard() {
   const vocab = useVocab();
   const [s, setS] = useState<Stats | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [resetting, setResetting] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
 
   const load = () => api.stats().then(setS).catch((e: ApiError) => setErr(e.message));
   useEffect(() => { load(); }, []);
-
-  async function reset() {
-    if (!confirm("Restore the seeded demo state? This clears all human decisions.")) return;
-    setResetting(true); setMsg(null);
-    try {
-      await api.resetDemo();
-      setMsg("Demo reset to the seeded state.");
-      load();
-    } catch (e) {
-      setErr((e as ApiError).message);
-    } finally { setResetting(false); }
-  }
 
   if (err) return <div className="banner err"><i className="bi bi-exclamation-triangle" /><span>{err}</span></div>;
   if (!s) return <div className="muted"><span className="spinner" /> Loading&hellip;</div>;
@@ -86,20 +72,6 @@ export function Dashboard() {
           These hashes are what make a run reproducible: the same code, config and
           vocabulary produce the same submission, byte for byte, on any platform.
         </p>
-      </div>
-
-      <div className="card-panel">
-        <h2>Demo controls</h2>
-        <div className="filters">
-          <button className="btn danger" onClick={reset} disabled={resetting || !getReviewer()}>
-            {resetting ? <span className="spinner" /> : <i className="bi bi-arrow-counterclockwise" />}
-            Reset demo
-          </button>
-          <span className="muted" style={{ fontSize: ".78rem" }}>
-            Restores the seeded state so the public link cannot be permanently broken.
-            Clears decisions; leaves the run itself alone.
-          </span>
-        </div>
       </div>
     </>
   );
