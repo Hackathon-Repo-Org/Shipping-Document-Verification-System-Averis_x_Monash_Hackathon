@@ -14,6 +14,12 @@ weight. Every field gets one of three verdicts — **match**, **mismatch**, or
 unreadable, the wrong document was attached, or a value was left blank, the record is
 escalated to a human with the evidence attached rather than guessed at.
 
+**Live demo: <https://shipdoc.duckdns.org>** (API health check:
+<https://shipdoc.duckdns.org/api/health>). Hosted on AWS: one EC2 server runs the
+website and the API, and the data lives in an RDS PostgreSQL database. Reading is
+open to everyone; review actions need the demo passcode, which is given in the
+submission.
+
 ## Current score
 
 Measured **2026-09-21** against the organisers' own `scoring.py`, imported directly
@@ -31,8 +37,8 @@ All **20/20** planted edge cases correct on both. 776 tests pass. Two runs produ
 byte-identical output.
 
 > **The default is the hosted model, and that is a deliberate trade.**
-> `deepseek-chat` ships as the default because the deployed target is Azure Container
-> Apps, which has no GPU — a hosted API is the realistic path for new email traffic.
+> `deepseek-chat` ships as the default because the deployed target is a CPU-only AWS
+> EC2 server with no GPU, so a hosted API is the realistic path for new email traffic.
 > It costs **0.058 of final score** on this corpus.
 >
 > **Defect detection and end-to-end are identical**: both providers find all 46
@@ -99,9 +105,10 @@ models' answers, keyed by model name so they never collide.
 
 ## The web interface
 
-A reviewer UI and a thin HTTP API ship alongside the CLI. **They deploy separately**
-and talk only over HTTP — the frontend is a static bundle on Azure Static Web Apps,
-the backend a container on Azure Container Apps.
+A reviewer UI and a thin HTTP API ship alongside the CLI. **They are built separately**
+and talk only over HTTP. In the live deployment both sit behind one address on AWS:
+Caddy serves the frontend's static bundle and forwards `/api/*` to the backend
+container (see [deploy/aws/README.md](deploy/aws/README.md)).
 
 **Frontend repository:**
 <https://github.com/Hackathon-Repo-Org/Front-End-Shipping-Document-Verification-System-Averis_x_Monash_Hackathon_Version-1.0>
@@ -162,10 +169,24 @@ did the system say before a human touched it?" keeps its answer.
 
 ## Deployment
 
-`docs/deploy-azure.md` is the copy-paste command sequence, every step marked as
-needing a human or not, with the post-deploy checklist in the order that rules out
-one failure at a time. `SETUP.md` tiers 4–6 cover the database, the container and the
-split deployment in more detail.
+**Live on AWS** at <https://shipdoc.duckdns.org>:
+
+```
+Browser --HTTPS--> EC2 (Ubuntu, t3.small, Singapore)
+                     +-- Caddy: website + HTTPS certificate, forwards /api/* to the API
+                     +-- shipdoc API container (this repository's Dockerfile)
+                           |
+                           v
+                   RDS PostgreSQL (private, reachable only from the EC2 server)
+```
+
+[deploy/aws/README.md](deploy/aws/README.md) has the Compose file, the Caddy config
+and the exact deploy and update commands. Secrets (database URL, DeepSeek key, demo
+passcode) live only in a `.env` file on the server and are never committed.
+
+`docs/deploy-azure.md` is the earlier Azure runbook, kept for reference; the live
+deployment moved to AWS. `SETUP.md` tiers 4–6 cover the database and the container
+in more detail.
 
 The container was rehearsed locally: non-root (uid 10001), port 8000, Tesseract
 present, the LLM cache baked in, and **the full 520-record run completes inside the
@@ -235,18 +256,14 @@ python -m shipdoc                      # re-queries the model, rewrites the cach
 | **[docs/spec/](docs/spec/)** | The architecture specification and its patches. |
 | **[docs/reports/](docs/reports/)** | Corpus survey, scoring-rubric analysis. |
 | **[docs/decisions/](docs/decisions/)** | Why port resolution is off, and why projection rows 2 and 3 were kept — both measured. |
-| **[Dockerfile](Dockerfile)** | The deployable image. Batch job today; the same image becomes the API service later. No secrets in it. |
+| **[Dockerfile](Dockerfile)** | The deployable image. Starts the API by default; `run` gives the batch job. No secrets in it. |
+| **[deploy/aws/README.md](deploy/aws/README.md)** | The live AWS deployment: Compose file, Caddy config, deploy and update commands. |
 | **[.env.example](.env.example)** | Every environment variable this system reads. Keys and connection strings come from the environment only. |
-| **[docs/deploy-azure.md](docs/deploy-azure.md)** | The exact Azure deploy sequence, and the post-deploy checklist. |
+| **[docs/deploy-azure.md](docs/deploy-azure.md)** | The earlier Azure deploy sequence, kept for reference (the live deployment is on AWS). |
 | **[docs/design-notes.md](docs/design-notes.md)** | What the UI adopted from the team's prototype, and what it did not. |
 | **[ui/README.md](ui/README.md)** | The reviewer UI — screens, shortcuts, configuration. |
 
 ## Not built yet
-
-No API and no web UI yet — everything is files on disk and a CLI.
-**Cloud and database are built**: a PostgreSQL adapter, Alembic migrations, blob
-storage for attachments and a verified container image, all optional and all off by
-default (SETUP.md tiers 4 and 5). `python -m shipdoc inspect` is the view a UI would wrap rather than replace.
 
 UN/LOCODE port-code resolution is built, tested and **switched off**: measured against
 the answer key it destroyed more real defect detections than it created, because this
