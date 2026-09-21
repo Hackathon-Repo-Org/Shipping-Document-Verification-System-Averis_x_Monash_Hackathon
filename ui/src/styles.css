@@ -207,6 +207,59 @@ kbd {
 textarea { resize: vertical; width: 100%; font-family: inherit; }
 textarea.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 
+/* ---- email content preview box in review queue / detail ---- */
+.email-box {
+  background: var(--bg-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-md);
+  padding: .75rem .85rem;
+  margin-top: .75rem;
+}
+.email-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: .5rem;
+  margin-bottom: .35rem;
+}
+.email-subject {
+  font-weight: 600;
+  font-size: .88rem;
+  color: var(--text-dark);
+  line-height: 1.35;
+  word-break: break-word;
+}
+.email-meta {
+  font-size: .74rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: .6rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: .5rem;
+}
+.email-body {
+  font-size: .8rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--header-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--r);
+  padding: .6rem .75rem;
+  color: var(--text-dark);
+}
+.email-attachments {
+  display: flex;
+  gap: .4rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: .5rem;
+  font-size: .74rem;
+}
+
 @media (max-width: 800px) {
   .try-split { grid-template-columns: 1fr !important; }
   .queue-split { grid-template-columns: 1fr !important; }

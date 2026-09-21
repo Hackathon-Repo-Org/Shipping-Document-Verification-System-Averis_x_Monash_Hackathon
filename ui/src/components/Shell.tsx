@@ -50,11 +50,6 @@ export function Shell() {
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: ".6rem" }}>
-          {health?.provider && (
-            <span className="tag tone-muted" title="Model deciding categories">
-              <i className="bi bi-cpu" /> {health.model ?? health.provider}
-            </span>
-          )}
           <button className="btn" onClick={() => setOpen((v) => !v)}>
             <i className="bi bi-person-badge" />
             {getReviewer() || "Sign in"}

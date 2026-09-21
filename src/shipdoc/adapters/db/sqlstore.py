@@ -215,6 +215,25 @@ class SQLRepository:
                  "blob_url": a.blob_url}
                 for a in s.scalars(select(Attachment).where(
                     Attachment.email_id == email_id).order_by(Attachment.filename))]
+
+            email_row = s.get(Email, email_id)
+            if email_row is not None:
+                out["subject"] = email_row.subject
+                out["body"] = email_row.body
+                out["received_at"] = email_row.received_at.isoformat() if email_row.received_at else None
+
+            sender = None
+            try:
+                from pathlib import Path
+                for candidate in [Path("dataset/inbox"), Path(__file__).resolve().parents[4] / "dataset" / "inbox"]:
+                    p = candidate / f"{email_id}.json"
+                    if p.is_file():
+                        with open(p, "r", encoding="utf-8") as f:
+                            sender = json.load(f).get("from")
+                        break
+            except Exception:
+                pass
+            out["sender"] = sender
         # Phase 14: overlay active decisions so the caller sees CURRENT truth. The
         # stored row is never rewritten (R2); the projection happens on read.
         from shipdoc.adapters.projection import overlay
@@ -561,7 +580,18 @@ class SQLRepository:
         self.record_decision(email_id, field, decision_type, reviewer,
                              verdict=verdict, corrected_value=corrected_value,
                              corrected_category=corrected_category, note=note)
-        return self.get_record_detail(email_id)
+        updated = self.get_record_detail(email_id)
+        run_id = self.latest_run_id()
+        if run_id is not None and updated is not None:
+            with self.session() as s, s.begin():
+                db_rec = s.scalar(select(DBRecord).where(
+                    DBRecord.run_id == run_id, DBRecord.email_id == email_id))
+                if db_rec is not None:
+                    db_rec.category = updated.get("category", db_rec.category)
+                    db_rec.status = updated.get("status", db_rec.status)
+                    db_rec.review_reason = updated.get("review_reason")
+                    db_rec.has_defect = bool(updated.get("has_defect", False))
+        return updated
 
     def dashboard_stats(self) -> dict:
         """Counts, the AI's share of decisions, and the cache-hit rate."""

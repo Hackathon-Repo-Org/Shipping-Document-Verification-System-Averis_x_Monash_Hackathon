@@ -192,6 +192,10 @@ export interface RecordDetail extends RecordRow {
   defect_fields: string[] | null;
   attachments: { attachment_id: number; filename: string;
                  content_type: string | null; detected_type: string | null }[];
+  subject?: string | null;
+  body?: string | null;
+  sender?: string | null;
+  received_at?: string | null;
   // Present only on the ad-hoc /api/try response.
   unknown_labels?: string[];
   label_proposals?: TryLabelProposal[];

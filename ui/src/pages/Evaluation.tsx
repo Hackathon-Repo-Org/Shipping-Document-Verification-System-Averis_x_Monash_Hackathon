@@ -45,7 +45,7 @@ export function Evaluation() {
                ["Final score", "final_score"]] as const).map(([label, key]) => (
               <div className="kpi-card" key={key}>
                 <div className="kpi-label">{label}</div>
-                <div className="kpi-value">{fmt(e.latest?.[key])}</div>
+                <div className="kpi-value">{fmtPercent(e.latest?.[key])}</div>
               </div>
             ))}
           </div>
@@ -69,8 +69,8 @@ export function Evaluation() {
                 {axes.map(([axis, l, r]) => (
                   <tr key={axis}>
                     <td>{axis}</td>
-                    <td><strong>{l}</strong></td>
-                    <td>{r}</td>
+                    <td><strong>{fmtPercent(l)}</strong></td>
+                    <td>{fmtPercent(r)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -96,6 +96,37 @@ export function Evaluation() {
   );
 }
 
-function fmt(v: unknown) {
-  return typeof v === "number" ? v.toFixed(4) : String(v ?? "—");
+function fmtPercent(v: unknown): string {
+  if (v === null || v === undefined || v === "") return "—";
+  if (typeof v === "number") {
+    if (v >= 0 && v <= 1) {
+      const pct = v * 100;
+      return pct === 100 || pct === 0 ? `${pct}%` : `${pct.toFixed(2)}%`;
+    }
+    return String(v);
+  }
+  if (typeof v === "string") {
+    const s = v.trim();
+    // Fraction check like "46/46"
+    const frac = s.match(/^(\d+)\s*\/\s*(\d+)$/);
+    if (frac) {
+      const n = parseInt(frac[1], 10);
+      const d = parseInt(frac[2], 10);
+      if (d > 0) {
+        const pct = (n / d) * 100;
+        const pStr = pct === 100 || pct === 0 ? `${pct}%` : `${pct.toFixed(1)}%`;
+        return `${pStr} (${s})`;
+      }
+    }
+    // Only parse decimals with a dot (e.g. "0.9526", "1.0000") to avoid converting integer counts like "23", "5", "1", "0"
+    if (s.includes(".")) {
+      const num = Number(s);
+      if (!isNaN(num) && num >= 0 && num <= 1) {
+        const pct = num * 100;
+        return pct === 100 || pct === 0 ? `${pct}%` : `${pct.toFixed(2)}%`;
+      }
+    }
+    return s;
+  }
+  return String(v);
 }

@@ -77,6 +77,8 @@ def overlay(record: dict, decisions: list[dict]) -> dict:
 
         if dtype == "override_category" and d.get("corrected_category"):
             category = d["corrected_category"]
+            if out.get("status") == NEEDS_REVIEW:
+                bypassed = True
             applied.append(d)
             continue
 

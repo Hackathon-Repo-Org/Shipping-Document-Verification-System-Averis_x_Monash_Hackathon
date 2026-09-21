@@ -26,6 +26,7 @@ export function Detail() {
   const [err, setErr] = useState<string | null>(null);
   const [target, setTarget] = useState<EvidenceTarget | null>(null);
   const [showTrace, setShowTrace] = useState(false);
+  const [showEmail, setShowEmail] = useState(true);
 
   const load = useCallback(() => {
     setErr(null);
@@ -70,6 +71,64 @@ export function Detail() {
                 title="A record-level override moved this out of review. That bypasses the monotone state rule and is shown deliberately.">
             <i className="bi bi-shield-exclamation" /> state rule bypassed
           </span>
+        )}
+      </div>
+
+      <div className="email-box" style={{ marginBottom: "1rem" }}>
+        <div className="email-box-header">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="email-subject">
+              {rec.subject || "(No Subject)"}
+            </div>
+            <div className="email-meta">
+              {rec.sender && (
+                <span><i className="bi bi-envelope" /> <strong>From:</strong> {rec.sender}</span>
+              )}
+              {rec.received_at && (
+                <span><i className="bi bi-clock" /> {rec.received_at.replace("T", " ").slice(0, 19)}</span>
+              )}
+              {rec.category && (
+                <span className="tag tone-primary">{catTerm.label}</span>
+              )}
+            </div>
+          </div>
+          <button className="btn" style={{ padding: ".2rem .5rem", fontSize: ".72rem" }}
+                  onClick={() => setShowEmail((v) => !v)}
+                  title={showEmail ? "Collapse email content" : "Expand email content"}>
+            <i className={`bi bi-chevron-${showEmail ? "up" : "down"}`} />
+            {showEmail ? "Hide email" : "View email"}
+          </button>
+        </div>
+
+        {showEmail && rec.body && (
+          <div className="email-body">
+            {rec.body}
+          </div>
+        )}
+        {showEmail && !rec.body && (
+          <div className="muted" style={{ fontSize: ".76rem", fontStyle: "italic", padding: ".4rem" }}>
+            No email body recorded.
+          </div>
+        )}
+
+        {rec.attachments && rec.attachments.length > 0 && (
+          <div className="email-attachments">
+            <span className="muted" style={{ fontWeight: 600 }}>
+              <i className="bi bi-paperclip" /> Attachments ({rec.attachments.length}):
+            </span>
+            {rec.attachments.map((att) => (
+              <span key={att.attachment_id} className="tag tone-muted" title={att.detected_type ?? "Attachment"}>
+                {att.filename} {att.detected_type ? `(${att.detected_type})` : ""}
+              </span>
+            ))}
+          </div>
+        )}
+        {rec.attachments && rec.attachments.length === 0 && (
+          <div className="email-attachments">
+            <span className="tag tone-warning" style={{ fontSize: ".7rem" }}>
+              <i className="bi bi-paperclip" /> No attachments found
+            </span>
+          </div>
         )}
       </div>
 
