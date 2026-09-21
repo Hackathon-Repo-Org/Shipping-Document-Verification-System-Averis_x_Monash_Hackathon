@@ -392,11 +392,15 @@ def _register(app: FastAPI) -> None:      # noqa: C901 - a route table, not logi
             raise HTTPException(422, detail="Paste at least a subject or a body.")
 
         from shipdoc.config import load_config
-        from shipdoc.pipeline import process_adhoc
+        from shipdoc.pipeline import process_adhoc, build_llm
         try:
+            cfg = load_config(REPO_ROOT / "config")
+            llm = build_llm(cfg, REPO_ROOT / "output", cache_dir=REPO_ROOT / "cache" / "llm")
+            extra_labels = body.get("extra_labels") or []
             return process_adhoc(subject=subject, body=email_body,
                                  si_text=si, bl_text=bl,
-                                 cfg=load_config(REPO_ROOT / "config"), llm=None)
+                                 cfg=cfg, llm=llm,
+                                 extra_labels=extra_labels)
         except Exception as e:  # noqa: BLE001 - a visitor gets a message, not a trace
             raise HTTPException(
                 500, detail=f"Could not process that input "
@@ -413,6 +417,11 @@ def _register(app: FastAPI) -> None:      # noqa: C901 - a route table, not logi
         """
         from shipdoc.adapters.api.samples import SAMPLE
         return SAMPLE
+
+    @app.get("/api/try/sample2")
+    def try_sample2() -> dict:
+        from shipdoc.adapters.api.samples import SAMPLE2
+        return SAMPLE2
 
     # ------------------------------------------------------------ demo reset
     @app.post("/api/demo/reset")

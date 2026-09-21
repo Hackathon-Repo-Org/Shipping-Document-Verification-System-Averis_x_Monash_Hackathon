@@ -60,3 +60,60 @@ SAMPLE = {
         "written with US and European separators.",
     ],
 }
+
+SAMPLE2 = {
+    "subject": "DRAFT BL CHK - 5RFR-88214 - RTM/HAM - MEGA RUBBER GLOVE",
+    "body": (
+        "Hi Team,\n\n"
+        "Pls chk below SI and arrange accordingly.\n\n"
+        "Old docs show RTM, but current dest should be HAM.\n"
+        "Kindly use the latest SI as ref. Don't follow prev BL.\n\n"
+        "Tks."
+    ),
+    "si_text": (
+        "SI\n"
+        "========================================\n"
+        "Bk No: BK-260921\n\n"
+        "SHP: MEGA RUBBER GLOVE SDN. BHD.\n"
+        "LOT 5, JALAN PERUSAHAAN, 81700 PASIR GUDANG, JOHOR, MY\n\n"
+        "CNEE: NORDIC HEALTHCARE SERVICES GMBH\n"
+        "HAFENSTRASSE 42, 20457 HAMBURG, DE\n\n"
+        "N/P: NORDIC HEALTHCARE SERVICES GMBH\n\n"
+        "POL: PKG\n"
+        "POD: HAM\n"
+        "FD: HAM\n\n"
+        "Ctr: 2 x 40HC\n"
+        "Qty: 500,000 BOX\n"
+        "G/W: 22,450.50 KGS\n"
+        "N/W: 20,800.00 KGS\n"
+        "Meas: 68.50 CBM\n\n"
+        "Note:\n"
+        "POD = HAM.\n"
+        "Ignore prev doc showing RTM."
+    ),
+    "bl_text": (
+        "B/L DRAFT\n"
+        "========================================\n"
+        "SHP: MEGA RUBBER GLOVE SDN. BHD.\n"
+        "LOT 5, JALAN PERUSAHAAN, 81700 PASIR GUDANG, JOHOR, MY\n\n"
+        "CNEE: NORDIC HEALTHCARE SERVICES GMBH\n"
+        "HAFENSTRASSE 42, 20457 HAMBURG, DE\n\n"
+        "N/P: NORDIC HEALTHCARE SERVICES GMBH\n\n"
+        "POL: PKG\n"
+        "POD: RTM\n"
+        "FD: HAM\n\n"
+        "Ctr: 2 x 40HC\n"
+        "G/W: 22,450.50 KGS\n\n"
+        "Cargo:\n"
+        "NITRILE EXAM GLOVES\n"
+        "500K BOX"
+    ),
+    "expect": [
+        "This sample is packed with completely unknown, heavily abbreviated labels: "
+        "SHP, CNEE, N/P, Ctr, Qty, Meas, G/W.",
+        "Without the AI label mapping feature, this produces many 'CANNOT_DETERMINE' "
+        "results because it cannot extract the fields.",
+        "With the AI feature on, it will propose mapping SHP to shipper, CNEE to "
+        "consignee, etc., allowing the system to instantly learn the new format."
+    ],
+}

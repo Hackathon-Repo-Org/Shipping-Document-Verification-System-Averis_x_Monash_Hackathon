@@ -174,6 +174,17 @@ export interface Decision {
   corrected_category: string | null; note: string; reviewer: string;
   decided_at: string | null;
 }
+export interface TryLabelProposal {
+  normalised: string;
+  label: string;
+  proposed_field: string | null;
+  value: string;
+  context: string;
+  doc_ref: string;
+  line_no: number;
+  role: string;
+}
+
 export interface RecordDetail extends RecordRow {
   comparisons: Comparison[];
   events: { seq: number; stage: string; outcome: string; detail: string | null }[];
@@ -183,6 +194,7 @@ export interface RecordDetail extends RecordRow {
                  content_type: string | null; detected_type: string | null }[];
   // Present only on the ad-hoc /api/try response.
   unknown_labels?: string[];
+  label_proposals?: TryLabelProposal[];
 }
 export interface DecisionBody {
   decision_type: string; reviewer: string; field?: string | null;

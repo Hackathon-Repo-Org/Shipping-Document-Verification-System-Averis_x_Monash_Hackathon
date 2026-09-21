@@ -412,8 +412,64 @@ class _Unreachable:
 
 
 
+def _apply_temp_labels(cfg: Config, extra_labels: list[dict]) -> Config:
+    from dataclasses import replace
+    from shipdoc.learned import normalise_label
+    
+    new_fields = dict(cfg.fields)
+    for extra in extra_labels:
+        field_name = extra.get("proposed_field")
+        label = extra.get("label_raw") or extra.get("label")
+        if not field_name or not label or field_name not in new_fields:
+            continue
+        
+        spec = new_fields[field_name]
+        norm = normalise_label(label)
+        if norm not in [normalise_label(s) for s in spec.synonyms]:
+            new_syns = tuple(list(spec.synonyms) + [label])
+            new_fields[field_name] = replace(spec, synonyms=new_syns)
+            
+    from types import MappingProxyType
+    return replace(cfg, fields=MappingProxyType(new_fields))
+
+
+def _propose_for_adhoc(unknowns: list, cfg: Config, llm: Any) -> list[dict]:
+    if not unknowns:
+        return []
+    
+    from shipdoc.llm.label_proposer import propose
+    import dataclasses
+    
+    seen = set()
+    proposals = []
+    for u in unknowns:
+        if u.normalised in seen:
+            continue
+        seen.add(u.normalised)
+        if llm is not None:
+            p = propose(u, cfg, llm)
+        else:
+            p = None
+            
+        if p is not None:
+            proposals.append(dataclasses.asdict(p))
+        else:
+            proposals.append({
+                "normalised": u.normalised,
+                "label": u.raw,
+                "proposed_field": None,
+                "value": u.value,
+                "context": u.context,
+                "doc_ref": u.doc_ref,
+                "line_no": u.line_no,
+                "role": u.role,
+            })
+    return proposals
+
+
 def process_adhoc(*, subject: str, body: str, si_text: str, bl_text: str,
-                  cfg: Config, llm: Any = None) -> dict:
+                  cfg: Config, llm: Any = None,
+                  extra_labels: list[dict] | None = None) -> dict:
     """Phase 15 — run ONE pasted email through the real engine. Nothing is stored.
 
     This is the "try it yourself" path: a judge pastes a shipping instruction and a
@@ -429,14 +485,14 @@ def process_adhoc(*, subject: str, body: str, si_text: str, bl_text: str,
       * No database write. An anonymous visitor cannot add rows to the demo, and a
         run they trigger cannot appear in the run history and confuse a judge
         comparing hashes. R2 is about finished runs; this simply never becomes one.
-      * No LLM requirement. `llm=None` falls back to deterministic keyword rules, so
-        the feature works with no API key and cannot be made to burn credits by
-        being refreshed.
       * No file upload. Pasted text only: accepting arbitrary uploads on a public URL
         means running the extractor over hostile input from strangers, which is a
         different risk conversation from the one this demo needs.
     """
-    from shipdoc.types import Block, ExtractedDoc, Method, SourceRef
+    if extra_labels:
+        cfg = _apply_temp_labels(cfg, extra_labels)
+
+    from shipdoc.types import Block, ExtractedDoc, Method, SourceRef, Record, StageEvent, RecordState, ReasonKey
 
     def _doc(text: str, name: str) -> ExtractedDoc:
         clean = (text or "").replace("\r\n", "\n").replace("\r", "\n")
@@ -500,11 +556,15 @@ def process_adhoc(*, subject: str, body: str, si_text: str, bl_text: str,
                                     "a comparison needs BOTH an SI and a BL", seq=1))
 
     # 3. THE state authority. Not a copy of it.
+    from shipdoc.state.machine import evaluate
     evaluate(rec, cfg)
+    
+    proposals = _propose_for_adhoc(rec.unknown_labels, cfg, llm)
 
     from shipdoc.adapters.projection import record_to_detail
     out = record_to_detail(rec, cfg)
     out["unknown_labels"] = sorted({u.normalised for u in rec.unknown_labels})[:12]
+    out["label_proposals"] = proposals
     out["decided_by"] = rec.decided_by
     return out
 

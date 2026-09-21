@@ -31,31 +31,37 @@ export function TryIt() {
   const [expect, setExpect] = useState<string[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [approvedLabels, setApprovedLabels] = useState<Record<string, {label: string, field: string}>>({});
 
-  async function loadSample() {
+  async function loadSample(path = "/api/try/sample") {
     setErr(null);
     try {
-      const r = await fetch(`${API_BASE}/api/try/sample`);
+      const r = await fetch(`${API_BASE}${path}`);
       if (!r.ok) throw new Error(String(r.status));
       const s: Sample = await r.json();
       setSubject(s.subject); setBody(s.body); setSi(s.si_text); setBl(s.bl_text);
-      setExpect(s.expect); setResult(null);
+      setExpect(s.expect); setResult(null); setApprovedLabels({});
     } catch {
       setErr("Could not load the example. Is the API reachable?");
     }
   }
 
-  async function run() {
+  async function run(useLabels = false) {
     setBusy(true); setErr(null); setResult(null);
     try {
+      const extra_labels = useLabels ? Object.values(approvedLabels).map(l => ({
+        label: l.label, proposed_field: l.field
+      })) : [];
+      
       const r = await fetch(`${API_BASE}/api/try`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, body, si_text: si, bl_text: bl }),
+        body: JSON.stringify({ subject, body, si_text: si, bl_text: bl, extra_labels }),
       });
       const j = await r.json();
       if (!r.ok) throw new ApiError(r.status, j?.detail ?? "Request failed");
       setResult(j);
+      if (!useLabels) setApprovedLabels({});
     } catch (e) {
       setErr(e instanceof ApiError ? e.message
         : `Could not reach the API at ${API_BASE}.`);
@@ -88,18 +94,21 @@ export function TryIt() {
       </div>
 
       <div className="card-panel">
-        <div className="filters">
-          <button className="btn" onClick={loadSample}>
-            <i className="bi bi-magic" /> Load a worked example
+        <div className="filters" style={{ flexWrap: "wrap" }}>
+          <button className="btn" onClick={() => loadSample()}>
+            <i className="bi bi-file-earmark-text" /> Example 1 (Standard)
           </button>
-          <button className="btn primary" onClick={run}
+          <button className="btn" onClick={() => loadSample("/api/try/sample2")}>
+            <i className="bi bi-tags" /> Example 2 (Short forms)
+          </button>
+          <button className="btn primary" onClick={() => run(false)}
                   disabled={busy || !(subject || body || si || bl)}>
             {busy ? <span className="spinner" /> : <i className="bi bi-play-fill" />}
             Run it
           </button>
           <button className="btn" onClick={clearAll} disabled={busy}>Clear</button>
-          <span className="muted" style={{ fontSize: ".76rem" }}>
-            Tip: change the discharge port on one document and re-run.
+          <span className="muted" style={{ fontSize: ".76rem", width: "100%", marginTop: ".25rem" }}>
+            Tip: try loading Example 2 to test the AI label mapping feature!
           </span>
         </div>
 
@@ -185,13 +194,95 @@ export function TryIt() {
             </p>
           )}
 
-          {(result.unknown_labels?.length ?? 0) > 0 && (
+          {(result.label_proposals?.length ?? 0) > 0 ? (
+            <div className="card-panel" style={{ marginTop: ".8rem", border: "1px solid var(--accent-orange)" }}>
+              <h3 style={{ marginTop: 0, display: "flex", gap: ".5rem", alignItems: "center" }}>
+                <i className="bi bi-tags" style={{ color: "var(--accent-orange)" }} />
+                Unknown Labels ({result.label_proposals!.length} found)
+              </h3>
+              <p className="muted" style={{ fontSize: ".82rem", marginBottom: "1rem" }}>
+                The model has proposed field mappings for these labels. Approve them to temporarily apply them as deterministic rules for this run.
+              </p>
+              
+              <div style={{ display: "grid", gap: ".8rem", marginBottom: "1rem" }}>
+                {result.label_proposals!.map(p => (
+                  <div key={p.normalised} style={{ padding: ".8rem", background: "var(--bg-lighter)", borderRadius: "4px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: ".5rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
+                        <strong>{p.label}</strong> → {p.proposed_field ? (
+                          <Badge term={termOf(vocab?.fields, p.proposed_field)} />
+                        ) : (
+                          <select 
+                            className="input-sm"
+                            onChange={(e) => {
+                              const field = e.target.value;
+                              if (field) {
+                                setApprovedLabels(prev => ({
+                                  ...prev, 
+                                  [p.normalised]: { label: p.label, field }
+                                }));
+                              }
+                            }}
+                            value={approvedLabels[p.normalised]?.field || ""}
+                          >
+                            <option value="">-- select field --</option>
+                            {vocab?.fields.map(f => (
+                              <option key={f.value} value={f.value}>{f.label}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", gap: ".3rem" }}>
+                        <button 
+                          className={`btn ${approvedLabels[p.normalised] ? "primary" : ""}`}
+                          style={{ padding: ".2rem .5rem", fontSize: ".75rem" }}
+                          disabled={!p.proposed_field && !approvedLabels[p.normalised]?.field}
+                          onClick={() => {
+                            if (p.proposed_field) {
+                              setApprovedLabels(prev => ({
+                                ...prev, 
+                                [p.normalised]: { label: p.label, field: p.proposed_field! }
+                              }));
+                            }
+                          }}
+                        >
+                          <i className="bi bi-check2" /> Approve
+                        </button>
+                        <button 
+                          className="btn"
+                          style={{ padding: ".2rem .5rem", fontSize: ".75rem" }}
+                          onClick={() => {
+                            const next = { ...approvedLabels };
+                            delete next[p.normalised];
+                            setApprovedLabels(next);
+                          }}
+                        >
+                          <i className="bi bi-x" /> Reject
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mono muted" style={{ fontSize: ".75rem", whiteSpace: "pre-wrap" }}>
+                      {p.context}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <button 
+                className="btn primary" 
+                disabled={Object.keys(approvedLabels).length === 0 || busy}
+                onClick={() => run(true)}
+              >
+                {busy ? <span className="spinner" /> : <i className="bi bi-arrow-repeat" />}
+                Re-run with {Object.keys(approvedLabels).length} approved labels
+              </button>
+            </div>
+          ) : (result.unknown_labels?.length ?? 0) > 0 && (
             <div className="banner warn" style={{ marginTop: ".8rem" }}>
               <i className="bi bi-tags" />
               <span>
                 Labels it did not recognise: <span className="mono">
-                {result.unknown_labels!.join(", ")}</span>. In a real run these become
-                proposals for a human to approve — they never take effect on their own.
+                {result.unknown_labels!.join(", ")}</span>.
               </span>
             </div>
           )}
