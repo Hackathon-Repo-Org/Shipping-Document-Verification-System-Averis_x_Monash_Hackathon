@@ -1,0 +1,30 @@
+services:
+  api:
+    build: ./backend
+    image: shipdoc-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      SHIPDOC_ROOT: /app
+    expose:
+      - "8000"
+
+  web:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend/dist:/srv:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  caddy_data:
+  caddy_config:
