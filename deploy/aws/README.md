@@ -1,6 +1,6 @@
 # AWS deployment (EC2 + RDS PostgreSQL)
 
-Live demo: https://18-139-130-143.sslip.io
+Live demo: https://shipdoc.duckdns.org
 
 ```
 Browser
@@ -38,10 +38,10 @@ Neither file contains a secret. Secrets live only in `.env` on the server.
 `.env` holds:
 
 ```
-SITE_ADDRESS=<ip-with-dashes>.sslip.io
+SITE_ADDRESS=<your-domain>          # e.g. shipdoc.duckdns.org, or <ip-with-dashes>.sslip.io
 DATABASE_URL=postgresql+psycopg://<user>:<password>@<rds-endpoint>:5432/shipdoc?sslmode=require
 DEMO_PASSCODE=<passcode>
-CORS_ORIGINS=https://<ip-with-dashes>.sslip.io
+CORS_ORIGINS=https://<your-domain>
 DEEPSEEK_API_KEY=<optional, for emails not in the committed cache>
 ```
 
@@ -57,7 +57,7 @@ sudo docker compose up -d api
 
 cd frontend
 sudo docker run --rm -v "$PWD":/app -w /app \
-  -e VITE_API_BASE_URL="https://<ip-with-dashes>.sslip.io" \
+  -e VITE_API_BASE_URL="https://<your-domain>" \
   node:20 sh -c "npm ci && npm run build"
 cd ..
 sudo docker compose up -d web
@@ -70,5 +70,5 @@ sudo docker compose up -d web
 cd /opt/shipdoc/backend && git pull && cd .. && sudo docker compose up -d --build api
 # frontend (Caddy serves the new files immediately)
 cd /opt/shipdoc/frontend && git pull && sudo docker run --rm -v "$PWD":/app -w /app \
-  -e VITE_API_BASE_URL="https://<ip-with-dashes>.sslip.io" node:20 sh -c "npm ci && npm run build"
+  -e VITE_API_BASE_URL="https://<your-domain>" node:20 sh -c "npm ci && npm run build"
 ```
